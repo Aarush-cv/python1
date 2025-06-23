@@ -1,181 +1,176 @@
-import random
-from colorama import init, Fore, Style
-init(autoreset=True)
+# 1. IMPORT necessary libraries:
+#    - google.genai (for interacting with the Gemini API)
+#    - config (for API key management)
+from google import genai
+from google.genai import types
+import config 
 
-def display_board(board):
-    print()
-    def colored(cell):
-        if cell == 'X':
-            return Fore.RED + cell + Style.RESET_ALL
-        elif cell == 'O':
-            return Fore.BLUE + cell + Style.RESET_ALL
-        else:
-            return Fore.YELLOW + cell + Style.RESET_ALL
-    print(' ' + colored(board[0]) + ' | ' + colored(board[1]) + ' | ' + colored(board[2]))
-    print(Fore.CYAN + '-----------' + Style.RESET_ALL)
-    print(' ' + colored(board[3]) + ' | ' + colored(board[4]) + ' | ' + colored(board[5]))
-    print(Fore.CYAN + '-----------' + Style.RESET_ALL)
-    print(' ' + colored(board[6]) + ' | ' + colored(board[7]) + ' | ' + colored(board[8]))
-    print()
+client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-def player_choice():
-    symbol = ''
-    while symbol not in ['X', 'O']:
-        symbol = input(Fore.GREEN + "Do you want to be X or O? " + Style.RESET_ALL).upper()
-    if symbol == 'X':
-        return ('X', 'O')
-    else:
-        return ('O', 'X')
+def generate_response(prompt, temperature=0.3):
+    """Generate a response from Gemini API."""
 
-# Function: player_move(board, symbol)
-#   - Purpose: Prompt the player for a move and update the board.
-#   - Loop until a valid move is entered (number 1-9 and an available spot).
-#   - Update the board at the chosen index with the player's symbol
-def player_move(board,symbol):
-    move=-1
-    while move not in range (1,10) or not board [move - 1].isdigit():
-        try:
-            move = int(input("Enter your move (1-9) :"))
-            if move not in range (1,10) or not board [move - 1 ].isdigit():
-                print("Invalid move please try again")
-        except ValueError:
-            print("Please enter a number between 1 and 9")
-    board[move - 1 ] = symbol
+    try:
+        contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+        config_params = types.GenerateContentConfig(temperature=temperature)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", contents=contents, config=config_params)
+        return response.text
+    except Exception as e:
+        return f"Error: {str(e)}"
     
-def ai_move(board, ai_symbol, player_symbol):
-    for i in range(9):
-        if board[i].isdigit():
-            board_copy = board.copy()
-            board_copy[i]= ai_symbol
-            if check_win(board_copy , ai_symbol):
-                board[i]=ai_symbol
-                return
+category = input("Enter a category (e.g., animal, food, city): ")
+item = input(f"Enter a specific {category} to classify: ")
+
+print("\n--- ZERO-SHOT LEARNING ---")
+
+zero_shot = f"Is {item} a {category}? Answer yes or no."
+
+print(f"Prompt: {zero_shot}")
+
+print(f"Response: {generate_response(zero_shot)}")
+
+print("\n--- ONE-SHOT LEARNING ---")
+
+one_shot = f"""Determine if the item belongs to the category.
+
+Example:
+
+Category: fruit
+
+Item: apple
+
+Answer: Yes, apple is a fruit.
+
+Now you try:
+
+Category: {category}
+
+Item: {item}
+
+Answer:"""
+
+print(f"Response: {generate_response(one_shot)}")
+
+print("\n--- FEW-SHOT LEARNING ---")
+
+few_shot = f"""Determine if the item belongs to the category.
+
+Example 1:
+
+Category: fruit
+
+Item: apple
+
+Answer: Yes, apple is a fruit.
+
+Example 2:
+
+Category: fruit
+
+Item: carrot
+
+Answer: No, carrot is not a fruit. It's a vegetable.
+"""
+
+few_shot = f"""Determine if the item belongs to the category.
+
+Example 1:
+
+Category: fruit
+
+Item: apple
+
+Answer: Yes, apple is a fruit.
+
+Example 2:
+
+Category: fruit
+
+Item: carrot
+
+Answer: No, carrot is not a fruit. It's a vegetable.
+
+Example 3:
+
+Category: vehicle
+
+Item: bicycle
+
+Answer: Yes, bicycle is a vehicle.
+
+Now you try:
+
+Category: {category}
+
+Item: {item}
+
+Answer:"""
+
+print(f"Response: {generate_response(few_shot)}")
+
+print("\n--- CREATIVE FEW-SHOT EXAMPLE ---")
+
+creative_prompt = f"""Write a one-sentence story about the given word.
+
+Example 1:
+
+Word: moon
+
+Story: The moon winked at the lovers as they shared their first kiss.
+
+Example 2:
+
+Word: computer
+
+Story: The computer sighed as another cup of coffee was spilled on its keyboard.
+"""
+Word: {item}
+
+#Story:"""
+
+print(f"Response:{generate_response(creative_prompt, temperature=0.7)}")
+
+
+print("\n--- REFLECTION QUESTIONS ---")
+
+print("1. How did the responses differ between zero-shot, one-shot, and few-shot approaches?")
+
+print("2. Which approach gave the most helpful or accurate response?")
+
+print("3. How did the examples in the few-shot prompt influence the model's output?")
+
+#if __name__ == "__main__":
+#run_activity()
     
-    for i in range (9):
-     if board[i].isdigit():
-        board_copy = board.copy()
-        board_copy[i]= player_symbol
-        if check_win(board_copy, player_symbol):
-            board[i] = ai_symbol
-            return
-    
-    possible_moves=[i for i in range (9) if board[i].isdigit()]
-    move= random.choice(possible_moves)
-    board[move]=ai_symbol
+# 2. DEFINE function generate_response(prompt, temperature=0.3):
+#    - Initialize the genai client using the API key from config
+#    - Create the content structure based on the user's prompt
+#    - Configure the temperature and generate the response from Gemini API
+#    - Return the response text
 
+# 3. DEFINE function run_activity():
+#    - PRINT introductory message explaining zero-shot, one-shot, and few-shot learning
+#    - Step 1: Get user input for category and specific item (e.g., animal, food, city)
+   
+#    - Part 1: Zero-Shot Learning
+#      - Generate a zero-shot learning prompt (e.g., "Is X a Y?")
+#      - Display the AI's response to this prompt
 
-def check_win(board, symbol):
-    win_conditions=[
-        (0,1,2), (3,4,5), (6,7,8)
-        (0,3,6), (1,4,7), (2,5,8)
-        (0,4,8), (2,4,8)
-    ]
-    for cond in win_conditions:
-        if board[cond[0]]==board[cond[1]]==board[cond[2]] == symbol:
-            return True
-        return False
-    
-def check_full(board):
-    return all  (not spot.isdigit() for spot in board)
+#    - Part 2: One-Shot Learning
+#      - Provide a one-shot learning prompt with a single example
+#      - Display the AI's response to this one-shot prompt
 
-def tic_tac_toe():
-    print("Welcome to Tic-Tac-Toe!")
-    player_name = input(Fore.GREEN + "Enter your name: " + Style.RESET_ALL)
-    while True:
-        board = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-        player_symbol, ai_symbol = player_choice()
-        turn = 'Player'
-        game_on = True
+#    - Part 3: Few-Shot Learning
+#      - Provide a few-shot learning prompt with multiple examples
+#      - Display the AI's response to the few-shot prompt
 
-        while game_on:
-            display_board(board)
-            if turn == 'Player':
-                player_move(board, player_symbol)
-                if check_win(board, player_symbol):
-                    display_board(board)
-                    print('Congratulations! ' + player_name + ', you have won the game!')
-                    game_on = False
-                else:
-                    if check_full(board):
-                        display_board(board)
-                        print("It's a tie!")
-                        break
-                    else:
-                        turn = 'AI'
-            else:
-              ai_move(board, ai_symbol, player_symbol)
-        if check_win(board, ai_symbol):
-            display_board(board)
-            print("AI has won the game!")
-            game_on = False
-        else:
-         ai_move(board, ai_symbol, player_symbol)
-        if check_win(board, ai_symbol):
-            display_board(board)
-            print("AI has won the game!")
-            game_on = False
-        else:
-            if check_full(board):
-                display_board(board)
-                print("It's a tie!")
-                break
-            else:
-                turn = 'Player'
-    play_again = input("Do you want to play again? (yes/no): ").lower()
-    if play_again != 'yes':
-        print("Thank you for playing!")
-        
+#    - Part 4: Creative Few-Shot Learning Example
+#      - Create a creative prompt (e.g., a one-sentence story)
+#      - Display the AI's creative response with a slightly higher temperature (0.7)
 
-if __name__ == "__main__":
-    tic_tac_toe()
+#    - Part 5: Reflection
+#      - Ask reflection questions to encourage users to think about the differences between the learning approaches and the model's output
 
-# Function: ai_move(board, ai_symbol, player_symbol)
-#   - Purpose: Decide and execute the AI's move.
-#   - For each free spot, simulate placing ai_symbol:
-#         * If that move wins the game (using check_win), place the symbol and return.
-#   - For each free spot, simulate placing player_symbol:
-#         * If that move would let the player win, block it by placing ai_symbol and return.
-#   - Otherwise, choose a random available move and place ai_symbol.
-
-# Function: check_win(board, symbol)
-#   - Purpose: Check if the given symbol has met any winning condition.
-#   - Define winning conditions (horizontal, vertical, diagonal).
-#   - Return True if any condition is met; otherwise, return False.
-
-# Function: check_full(board)
-#   - Purpose: Check if the board is completely filled.
-#   - Return True if no cell contains a digit (i.e., all spots are taken).
-
-# Function: tic_tac_toe()
-#   - Purpose: Main game loop for Tic-Tac-Toe.
-#   - Welcome the player and prompt for the player's name (display prompt in green).
-#   - Loop to play games until the player chooses not to continue:
-#         * Initialize the board with cell numbers.
-#         * Get player's and AI's symbols via player_choice().
-#         * Set the starting turn to 'Player'.
-#         * While the game is on:
-#               - Display the board.
-#               - If it's the player's turn:
-#                     > Call player_move() to get and execute the player's move.
-#                     > Check if the player wins using check_win(); if so, display a win message and end the game.
-#                     > Else, if the board is full, display a tie message and break.
-#                     > Otherwise, set turn to 'AI'.
-#               - If it's the AI's turn:
-#                     > Call ai_move() to decide and execute the AI's move.
-#                     > Check if the AI wins; if so, display a win message and end the game.
-#                     > Else, if the board is full, display a tie message and break.
-#                     > Otherwise, set turn to 'Player'.
-#         * After the game ends, prompt the player if they want to play again.
-#         * If the player does not type 'yes', exit the loop and thank the player.
-#
-# If the script is executed as the main module, call tic_tac_toe() to start the game.
-
-
-
-
-
-
-
-
-
-
+# 4. IF __name__ == "__main__":
+#    - Call the run_activity() function to run the activity
